@@ -1,35 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Pokemon } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemon, getPokemonImageUrl, extractIdFromUrl } from '../services/pokeApi';
+import { getPokemonImageUrl } from '../services/pokeApi';
 import './PokemonCard.css';
 
 interface PokemonCardProps {
-  url: string;
+  pokemon: Pokemon;
   onClick: (pokemon: Pokemon) => void;
 }
 
-export function PokemonCard({ url, onClick }: PokemonCardProps) {
-  const [pokemon, setPokemon] = useState<Pokemon | null>(null);
-  const [loading, setLoading] = useState(true);
+export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
-
-  const pokemonId = extractIdFromUrl(url);
-
-  useEffect(() => {
-    getPokemon(pokemonId)
-      .then(setPokemon)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [pokemonId]);
-
-  if (loading || !pokemon) {
-    return (
-      <div className="pokemon-card pokemon-card--loading">
-        <div className="pokemon-card__skeleton"></div>
-      </div>
-    );
-  }
 
   const primaryType = pokemon.types[0]?.type.name || 'normal';
   const backgroundColor = TYPE_COLORS[primaryType] || TYPE_COLORS.normal;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Pokemon, PokemonSpecies } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
 import { getPokemonSpecies, getPokemonImageUrl } from '../services/pokeApi';
+import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonDetail.css';
 
 interface PokemonDetailProps {
@@ -9,16 +10,8 @@ interface PokemonDetailProps {
   onClose: () => void;
 }
 
-const STAT_NAMES: Record<string, string> = {
-  hp: 'HP',
-  attack: 'Attack',
-  defense: 'Defense',
-  'special-attack': 'Sp. Atk',
-  'special-defense': 'Sp. Def',
-  speed: 'Speed',
-};
-
 export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
+  const { language, t } = useLanguage();
   const [species, setSpecies] = useState<PokemonSpecies | null>(null);
   const [showShiny, setShowShiny] = useState(false);
 
@@ -31,11 +24,17 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
   const primaryType = pokemon.types[0]?.type.name || 'normal';
   const backgroundColor = TYPE_COLORS[primaryType] || TYPE_COLORS.normal;
 
-  const englishFlavorText = species?.flavor_text_entries.find(
+  const langCode = language === 'ko' ? 'ko' : 'en';
+
+  const flavorText = species?.flavor_text_entries.find(
+    (entry) => entry.language.name === langCode
+  ) || species?.flavor_text_entries.find(
     (entry) => entry.language.name === 'en'
   );
 
-  const englishGenus = species?.genera.find(
+  const genus = species?.genera.find(
+    (g) => g.language.name === langCode
+  ) || species?.genera.find(
     (g) => g.language.name === 'en'
   );
 
@@ -57,17 +56,17 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
         <div className="pokemon-detail__header" style={{ backgroundColor }}>
           <div className="pokemon-detail__id">#{String(pokemon.id).padStart(3, '0')}</div>
           <h2 className="pokemon-detail__name">{pokemon.name}</h2>
-          {englishGenus && (
-            <p className="pokemon-detail__genus">{englishGenus.genus}</p>
+          {genus && (
+            <p className="pokemon-detail__genus">{genus.genus}</p>
           )}
           <div className="pokemon-detail__types">
-            {pokemon.types.map((t) => (
+            {pokemon.types.map((tp) => (
               <span
-                key={t.type.name}
+                key={tp.type.name}
                 className="pokemon-detail__type"
-                style={{ backgroundColor: TYPE_COLORS[t.type.name] }}
+                style={{ backgroundColor: TYPE_COLORS[tp.type.name] }}
               >
-                {t.type.name}
+                {tp.type.name}
               </span>
             ))}
           </div>
@@ -83,7 +82,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
             <button
               className="pokemon-detail__shiny-toggle"
               onClick={() => setShowShiny(!showShiny)}
-              title={showShiny ? 'Show normal' : 'Show shiny'}
+              title={showShiny ? t('showNormal') : t('showShiny')}
             >
               {showShiny ? '✨' : '⭐'}
             </button>
@@ -93,24 +92,24 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
         <div className="pokemon-detail__body">
           <div className="pokemon-detail__info-grid">
             <div className="pokemon-detail__info-item">
-              <span className="pokemon-detail__info-label">Height</span>
+              <span className="pokemon-detail__info-label">{t('height')}</span>
               <span className="pokemon-detail__info-value">{(pokemon.height / 10).toFixed(1)} m</span>
             </div>
             <div className="pokemon-detail__info-item">
-              <span className="pokemon-detail__info-label">Weight</span>
+              <span className="pokemon-detail__info-label">{t('weight')}</span>
               <span className="pokemon-detail__info-value">{(pokemon.weight / 10).toFixed(1)} kg</span>
             </div>
           </div>
 
-          {englishFlavorText && (
+          {flavorText && (
             <div className="pokemon-detail__description">
-              <h3>Description</h3>
-              <p>{englishFlavorText.flavor_text.replace(/\f/g, ' ')}</p>
+              <h3>{t('description')}</h3>
+              <p>{flavorText.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ')}</p>
             </div>
           )}
 
           <div className="pokemon-detail__abilities">
-            <h3>Abilities</h3>
+            <h3>{t('abilities')}</h3>
             <div className="pokemon-detail__ability-list">
               {pokemon.abilities.map((a) => (
                 <span
@@ -118,18 +117,18 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
                   className={`pokemon-detail__ability ${a.is_hidden ? 'pokemon-detail__ability--hidden' : ''}`}
                 >
                   {a.ability.name.replace('-', ' ')}
-                  {a.is_hidden && <span className="pokemon-detail__hidden-label">Hidden</span>}
+                  {a.is_hidden && <span className="pokemon-detail__hidden-label">{t('hidden')}</span>}
                 </span>
               ))}
             </div>
           </div>
 
           <div className="pokemon-detail__stats">
-            <h3>Base Stats</h3>
+            <h3>{t('baseStats')}</h3>
             {pokemon.stats.map((stat) => (
               <div key={stat.stat.name} className="pokemon-detail__stat">
                 <span className="pokemon-detail__stat-name">
-                  {STAT_NAMES[stat.stat.name] || stat.stat.name}
+                  {t(`stats.${stat.stat.name}`)}
                 </span>
                 <span className="pokemon-detail__stat-value">{stat.base_stat}</span>
                 <div className="pokemon-detail__stat-bar">
@@ -144,7 +143,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
               </div>
             ))}
             <div className="pokemon-detail__stat pokemon-detail__stat--total">
-              <span className="pokemon-detail__stat-name">Total</span>
+              <span className="pokemon-detail__stat-name">{t('total')}</span>
               <span className="pokemon-detail__stat-value">
                 {pokemon.stats.reduce((sum, s) => sum + s.base_stat, 0)}
               </span>

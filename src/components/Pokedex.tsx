@@ -1,21 +1,24 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Pokemon, PokemonListItem } from '../types/pokemon';
+import type { Pokemon } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemonList } from '../services/pokeApi';
+import { getPokemonList, getPokemon } from '../services/pokeApi';
 import { PokemonCard } from './PokemonCard';
 import { PokemonDetail } from './PokemonDetail';
+import { useLanguage } from '../i18n/LanguageContext';
 import './Pokedex.css';
 
 const POKEMON_TYPES = Object.keys(TYPE_COLORS);
 
 export function Pokedex() {
-  const [pokemonList, setPokemonList] = useState<PokemonListItem[]>([]);
+  const { language, toggleLanguage, t } = useLanguage();
+  const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [loadedCount, setLoadedCount] = useState(0);
 
   const loadPokemon = useCallback(async (offset = 0, append = false) => {
     try {
@@ -26,10 +29,16 @@ export function Pokedex() {
       }
       const response = await getPokemonList(50, offset);
       setTotalCount(response.count);
+      setLoadedCount(offset + response.results.length);
+
+      const pokemonDetails = await Promise.all(
+        response.results.map((p) => getPokemon(p.name))
+      );
+
       if (append) {
-        setPokemonList((prev) => [...prev, ...response.results]);
+        setPokemonList((prev) => [...prev, ...pokemonDetails]);
       } else {
-        setPokemonList(response.results);
+        setPokemonList(pokemonDetails);
       }
     } catch (error) {
       console.error('Failed to load Pokemon:', error);
@@ -44,14 +53,16 @@ export function Pokedex() {
   }, [loadPokemon]);
 
   const filteredPokemon = useMemo(() => {
-    return pokemonList.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [pokemonList, searchTerm]);
+    return pokemonList.filter((p) => {
+      const matchesName = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = !selectedType || p.types.some((t) => t.type.name === selectedType);
+      return matchesName && matchesType;
+    });
+  }, [pokemonList, searchTerm, selectedType]);
 
   const handleLoadMore = () => {
-    if (!loadingMore && pokemonList.length < totalCount) {
-      loadPokemon(pokemonList.length, true);
+    if (!loadingMore && loadedCount < totalCount) {
+      loadPokemon(loadedCount, true);
     }
   };
 
@@ -66,16 +77,19 @@ export function Pokedex() {
   return (
     <div className="pokedex">
       <header className="pokedex__header">
+        <button className="pokedex__lang-toggle" onClick={toggleLanguage}>
+          {language === 'en' ? '한국어' : 'English'}
+        </button>
         <div className="pokedex__logo">
           <img
             src="https://raw.githubusercontent.com/PokeAPI/media/master/logo/pokeapi_256.png"
             alt="PokeAPI"
             className="pokedex__logo-img"
           />
-          <h1>Pokedex</h1>
+          <h1>{t('title')}</h1>
         </div>
         <p className="pokedex__subtitle">
-          Explore {totalCount.toLocaleString()} Pokemon from all generations
+          {t('subtitle', { count: totalCount.toLocaleString() })}
         </p>
       </header>
 
@@ -83,7 +97,7 @@ export function Pokedex() {
         <div className="pokedex__search">
           <input
             type="text"
-            placeholder="Search Pokemon..."
+            placeholder={t('search')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pokedex__search-input"
@@ -103,7 +117,7 @@ export function Pokedex() {
             onChange={(e) => setSelectedType(e.target.value)}
             className="pokedex__type-select"
           >
-            <option value="">All Types</option>
+            <option value="">{t('allTypes')}</option>
             {POKEMON_TYPES.map((type) => (
               <option key={type} value={type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -116,15 +130,15 @@ export function Pokedex() {
       {loading ? (
         <div className="pokedex__loading">
           <div className="pokedex__pokeball-spinner"></div>
-          <p>Loading Pokemon...</p>
+          <p>{t('loading')}</p>
         </div>
       ) : (
         <>
           <div className="pokedex__grid">
             {filteredPokemon.map((pokemon) => (
               <PokemonCard
-                key={pokemon.name}
-                url={pokemon.url}
+                key={pokemon.id}
+                pokemon={pokemon}
                 onClick={handlePokemonClick}
               />
             ))}
@@ -132,18 +146,18 @@ export function Pokedex() {
 
           {filteredPokemon.length === 0 && (
             <div className="pokedex__empty">
-              <p>No Pokemon found matching "{searchTerm}"</p>
+              <p>{t('noResults', { term: searchTerm || selectedType })}</p>
             </div>
           )}
 
-          {pokemonList.length < totalCount && !searchTerm && (
+          {loadedCount < totalCount && !searchTerm && !selectedType && (
             <div className="pokedex__load-more">
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
                 className="pokedex__load-more-btn"
               >
-                {loadingMore ? 'Loading...' : `Load More (${pokemonList.length} / ${totalCount})`}
+                {loadingMore ? t('loadingMore') : t('loadMore', { current: loadedCount, total: totalCount })}
               </button>
             </div>
           )}
