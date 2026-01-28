@@ -1,19 +1,25 @@
 import { useState } from 'react';
-import type { Pokemon } from '../types/pokemon';
+import type { PokemonWithNames } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
 import { getPokemonImageUrl } from '../services/pokeApi';
+import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonCard.css';
 
 interface PokemonCardProps {
-  pokemon: Pokemon;
-  onClick: (pokemon: Pokemon) => void;
+  pokemon: PokemonWithNames;
+  onClick: (pokemon: PokemonWithNames) => void;
 }
 
 export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
+  const { language } = useLanguage();
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const primaryType = pokemon.types[0]?.type.name || 'normal';
   const backgroundColor = TYPE_COLORS[primaryType] || TYPE_COLORS.normal;
+
+  const displayName = language === 'ko'
+    ? (pokemon.names.ko || pokemon.name)
+    : (pokemon.names.en || pokemon.name);
 
   return (
     <div
@@ -26,13 +32,13 @@ export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
         {!imageLoaded && <div className="pokemon-card__image-skeleton"></div>}
         <img
           src={getPokemonImageUrl(pokemon.id)}
-          alt={pokemon.name}
+          alt={displayName}
           className={`pokemon-card__image ${imageLoaded ? 'pokemon-card__image--loaded' : ''}`}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
         />
       </div>
-      <h3 className="pokemon-card__name">{pokemon.name}</h3>
+      <h3 className="pokemon-card__name">{displayName}</h3>
       <div className="pokemon-card__types">
         {pokemon.types.map((t) => (
           <span

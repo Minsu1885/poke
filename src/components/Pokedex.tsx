@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Pokemon } from '../types/pokemon';
+import type { PokemonWithNames } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemonList, getPokemon } from '../services/pokeApi';
+import { getPokemonList, getPokemonWithNames } from '../services/pokeApi';
 import { PokemonCard } from './PokemonCard';
 import { PokemonDetail } from './PokemonDetail';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -11,12 +11,12 @@ const POKEMON_TYPES = Object.keys(TYPE_COLORS);
 
 export function Pokedex() {
   const { language, toggleLanguage, t } = useLanguage();
-  const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
+  const [pokemonList, setPokemonList] = useState<PokemonWithNames[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
+  const [selectedPokemon, setSelectedPokemon] = useState<PokemonWithNames | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [loadedCount, setLoadedCount] = useState(0);
 
@@ -32,7 +32,7 @@ export function Pokedex() {
       setLoadedCount(offset + response.results.length);
 
       const pokemonDetails = await Promise.all(
-        response.results.map((p) => getPokemon(p.name))
+        response.results.map((p) => getPokemonWithNames(p.name))
       );
 
       if (append) {
@@ -53,8 +53,11 @@ export function Pokedex() {
   }, [loadPokemon]);
 
   const filteredPokemon = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return pokemonList.filter((p) => {
-      const matchesName = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesEnglishName = p.name.toLowerCase().includes(term);
+      const matchesKoreanName = p.names.ko?.toLowerCase().includes(term);
+      const matchesName = matchesEnglishName || matchesKoreanName;
       const matchesType = !selectedType || p.types.some((t) => t.type.name === selectedType);
       return matchesName && matchesType;
     });
@@ -66,7 +69,7 @@ export function Pokedex() {
     }
   };
 
-  const handlePokemonClick = (pokemon: Pokemon) => {
+  const handlePokemonClick = (pokemon: PokemonWithNames) => {
     setSelectedPokemon(pokemon);
   };
 

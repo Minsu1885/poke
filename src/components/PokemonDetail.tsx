@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { Pokemon, PokemonSpecies } from '../types/pokemon';
+import type { PokemonWithNames, PokemonSpecies } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
 import { getPokemonSpecies, getPokemonImageUrl } from '../services/pokeApi';
 import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonDetail.css';
 
 interface PokemonDetailProps {
-  pokemon: Pokemon;
+  pokemon: PokemonWithNames;
   onClose: () => void;
 }
 
@@ -25,6 +25,10 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
   const backgroundColor = TYPE_COLORS[primaryType] || TYPE_COLORS.normal;
 
   const langCode = language === 'ko' ? 'ko' : 'en';
+
+  const displayName = language === 'ko'
+    ? (pokemon.names.ko || pokemon.name)
+    : (pokemon.names.en || pokemon.name);
 
   const flavorText = species?.flavor_text_entries.find(
     (entry) => entry.language.name === langCode
@@ -55,7 +59,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
 
         <div className="pokemon-detail__header" style={{ backgroundColor }}>
           <div className="pokemon-detail__id">#{String(pokemon.id).padStart(3, '0')}</div>
-          <h2 className="pokemon-detail__name">{pokemon.name}</h2>
+          <h2 className="pokemon-detail__name">{displayName}</h2>
           {genus && (
             <p className="pokemon-detail__genus">{genus.genus}</p>
           )}
@@ -76,7 +80,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
                 ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/${pokemon.id}.png`
                 : getPokemonImageUrl(pokemon.id)
               }
-              alt={pokemon.name}
+              alt={displayName}
               className="pokemon-detail__image"
             />
             <button

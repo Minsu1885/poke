@@ -1,4 +1,4 @@
-import type { Pokemon, PokemonListResponse, PokemonSpecies } from '../types/pokemon';
+import type { Pokemon, PokemonListResponse, PokemonSpecies, PokemonWithNames } from '../types/pokemon';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
 
@@ -28,6 +28,23 @@ export async function getPokemonSpecies(nameOrId: string | number): Promise<Poke
 
 export function getPokemonImageUrl(id: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+}
+
+export async function getPokemonWithNames(nameOrId: string | number): Promise<PokemonWithNames> {
+  const [pokemon, species] = await Promise.all([
+    getPokemon(nameOrId),
+    getPokemonSpecies(nameOrId),
+  ]);
+
+  const names: Record<string, string> = {};
+  for (const entry of species.names) {
+    names[entry.language.name] = entry.name;
+  }
+
+  return {
+    ...pokemon,
+    names,
+  };
 }
 
 export function extractIdFromUrl(url: string): number {

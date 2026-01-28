@@ -61,6 +61,12 @@ export interface Pokemon {
 }
 
 export interface PokemonSpecies {
+  names: {
+    name: string;
+    language: {
+      name: string;
+    };
+  }[];
   flavor_text_entries: {
     flavor_text: string;
     language: {
@@ -79,6 +85,10 @@ export interface PokemonSpecies {
   evolution_chain: {
     url: string;
   };
+}
+
+export interface PokemonWithNames extends Pokemon {
+  names: Record<string, string>;
 }
 
 export const TYPE_COLORS: Record<string, string> = {
