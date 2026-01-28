@@ -89,6 +89,18 @@
   opacity: 1;
 }
 
+.pokemon-card__no-image {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .pokemon-card__name {
   margin: 8px 0;
   font-size: 18px;

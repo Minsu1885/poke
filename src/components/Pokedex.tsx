@@ -40,9 +40,13 @@ export function Pokedex() {
         .map((result) => result.value);
 
       if (append) {
-        setPokemonList((prev) => [...prev, ...pokemonDetails]);
+        setPokemonList((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newPokemon = pokemonDetails.filter((p) => !existingIds.has(p.id));
+          return [...prev, ...newPokemon].sort((a, b) => a.id - b.id);
+        });
       } else {
-        setPokemonList(pokemonDetails);
+        setPokemonList(pokemonDetails.sort((a, b) => a.id - b.id));
       }
     } catch (error) {
       console.error('Failed to load Pokemon:', error);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { PokemonWithNames, PokemonSpecies } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemonSpecies, getPokemonImageUrl, getPokemonFallbackImageUrl } from '../services/pokeApi';
+import { getPokemonSpecies, getPokemonImageUrl } from '../services/pokeApi';
 import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonDetail.css';
 
@@ -14,7 +14,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
   const { language, t } = useLanguage();
   const [species, setSpecies] = useState<PokemonSpecies | null>(null);
   const [showShiny, setShowShiny] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
+  const [fallbackLevel, setFallbackLevel] = useState(0);
 
   useEffect(() => {
     getPokemonSpecies(pokemon.id)
@@ -49,6 +49,29 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
     }
   };
 
+  // Image fallback chain
+  const getImageUrl = () => {
+    if (fallbackLevel >= 2) {
+      return showShiny ? pokemon.sprites.front_shiny : pokemon.sprites.front_default;
+    }
+    if (fallbackLevel === 1) {
+      const artwork = pokemon.sprites.other?.['official-artwork'];
+      return showShiny ? artwork?.front_shiny : artwork?.front_default;
+    }
+    // Level 0: GitHub raw URLs
+    const baseUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork';
+    return showShiny ? `${baseUrl}/shiny/${pokemon.id}.png` : getPokemonImageUrl(pokemon.id);
+  };
+
+  const handleImageError = () => {
+    if (fallbackLevel < 2) {
+      setFallbackLevel((prev) => prev + 1);
+    }
+  };
+
+  const imageUrl = getImageUrl();
+  const canToggleShiny = fallbackLevel < 2 || (pokemon.sprites.front_shiny && pokemon.sprites.front_default);
+
   const maxStat = 255;
 
   return (
@@ -76,18 +99,17 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
             ))}
           </div>
           <div className="pokemon-detail__image-container">
-            <img
-              src={useFallback
-                ? getPokemonFallbackImageUrl(pokemon.id)
-                : showShiny
-                  ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/${pokemon.id}.png`
-                  : getPokemonImageUrl(pokemon.id)
-              }
-              alt={displayName}
-              className="pokemon-detail__image"
-              onError={() => !useFallback && setUseFallback(true)}
-            />
-            {!useFallback && (
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={displayName}
+                className="pokemon-detail__image"
+                onError={handleImageError}
+              />
+            ) : (
+              <div className="pokemon-detail__no-image">?</div>
+            )}
+            {canToggleShiny && (
               <button
                 className="pokemon-detail__shiny-toggle"
                 onClick={() => setShowShiny(!showShiny)}

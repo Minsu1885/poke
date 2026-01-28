@@ -30,10 +30,6 @@ export function getPokemonImageUrl(id: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
 
-export function getPokemonFallbackImageUrl(id: number): string {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
-}
-
 export async function getPokemonWithNames(nameOrId: string | number): Promise<PokemonWithNames> {
   const pokemon = await getPokemon(nameOrId);
 
