@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { PokemonWithNames } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
 import { getPokemonList, getPokemonWithNames } from '../services/pokeApi';
@@ -13,52 +13,58 @@ export function Pokedex() {
   const { language, toggleLanguage, t } = useLanguage();
   const [pokemonList, setPokemonList] = useState<PokemonWithNames[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonWithNames | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [loadedCount, setLoadedCount] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const isLoadingRef = useRef(false);
 
-  const loadPokemon = useCallback(async (offset = 0, append = false) => {
+  const loadAllPokemon = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    setLoading(true);
+
     try {
-      if (append) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-      const response = await getPokemonList(50, offset);
-      setTotalCount(response.count);
-      setLoadedCount(offset + response.results.length);
+      // Get total count first
+      const firstResponse = await getPokemonList(1, 0);
+      const total = firstResponse.count;
+      setTotalCount(total);
 
-      const pokemonResults = await Promise.allSettled(
-        response.results.map((p) => getPokemonWithNames(p.name))
-      );
+      // Load all Pokemon in batches
+      const batchSize = 100;
+      const allPokemon: PokemonWithNames[] = [];
 
-      const pokemonDetails = pokemonResults
-        .filter((result): result is PromiseFulfilledResult<PokemonWithNames> => result.status === 'fulfilled')
-        .map((result) => result.value);
+      for (let offset = 0; offset < total; offset += batchSize) {
+        const response = await getPokemonList(batchSize, offset);
 
-      if (append) {
-        setPokemonList((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newPokemon = pokemonDetails.filter((p) => !existingIds.has(p.id));
-          return [...prev, ...newPokemon].sort((a, b) => a.id - b.id);
-        });
-      } else {
-        setPokemonList(pokemonDetails.sort((a, b) => a.id - b.id));
+        const pokemonResults = await Promise.allSettled(
+          response.results.map((p) => getPokemonWithNames(p.name))
+        );
+
+        const pokemonDetails = pokemonResults
+          .filter((result): result is PromiseFulfilledResult<PokemonWithNames> => result.status === 'fulfilled')
+          .map((result) => result.value);
+
+        allPokemon.push(...pokemonDetails);
+        setLoadedCount(offset + response.results.length);
+        setLoadingProgress(Math.min(100, Math.round(((offset + batchSize) / total) * 100)));
+
+        // Update list incrementally for better UX
+        setPokemonList([...allPokemon].sort((a, b) => a.id - b.id));
       }
     } catch (error) {
       console.error('Failed to load Pokemon:', error);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
+      isLoadingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    loadPokemon();
-  }, [loadPokemon]);
+    loadAllPokemon();
+  }, [loadAllPokemon]);
 
   const filteredPokemon = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -66,16 +72,10 @@ export function Pokedex() {
       const matchesEnglishName = p.name.toLowerCase().includes(term);
       const matchesKoreanName = p.names.ko?.toLowerCase().includes(term);
       const matchesName = matchesEnglishName || matchesKoreanName;
-      const matchesType = !selectedType || p.types.some((t) => t.type.name === selectedType);
+      const matchesType = !selectedType || p.types.some((tp) => tp.type.name === selectedType);
       return matchesName && matchesType;
     });
   }, [pokemonList, searchTerm, selectedType]);
-
-  const handleLoadMore = () => {
-    if (!loadingMore && loadedCount < totalCount) {
-      loadPokemon(loadedCount, true);
-    }
-  };
 
   const handlePokemonClick = (pokemon: PokemonWithNames) => {
     setSelectedPokemon(pokemon);
@@ -131,20 +131,34 @@ export function Pokedex() {
             <option value="">{t('allTypes')}</option>
             {POKEMON_TYPES.map((type) => (
               <option key={type} value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {t(`types.${type}`)}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {loading ? (
+      {loading && pokemonList.length === 0 ? (
         <div className="pokedex__loading">
           <div className="pokedex__pokeball-spinner"></div>
           <p>{t('loading')}</p>
         </div>
       ) : (
         <>
+          {loading && (
+            <div className="pokedex__progress">
+              <div className="pokedex__progress-bar">
+                <div
+                  className="pokedex__progress-fill"
+                  style={{ width: `${loadingProgress}%` }}
+                ></div>
+              </div>
+              <p className="pokedex__progress-text">
+                {t('loadingMore')} ({loadedCount} / {totalCount})
+              </p>
+            </div>
+          )}
+
           <div className="pokedex__grid">
             {filteredPokemon.map((pokemon) => (
               <PokemonCard
@@ -155,21 +169,9 @@ export function Pokedex() {
             ))}
           </div>
 
-          {filteredPokemon.length === 0 && (
+          {filteredPokemon.length === 0 && !loading && (
             <div className="pokedex__empty">
               <p>{t('noResults', { term: searchTerm || selectedType })}</p>
-            </div>
-          )}
-
-          {loadedCount < totalCount && (
-            <div className="pokedex__load-more">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="pokedex__load-more-btn"
-              >
-                {loadingMore ? t('loadingMore') : t('loadMore', { current: loadedCount, total: totalCount })}
-              </button>
             </div>
           )}
         </>

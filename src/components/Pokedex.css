@@ -211,6 +211,33 @@
   font-size: 18px;
 }
 
+.pokedex__progress {
+  max-width: 400px;
+  margin: 0 auto 24px;
+  text-align: center;
+}
+
+.pokedex__progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.pokedex__progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.pokedex__progress-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin: 0;
+}
+
 .pokedex__load-more {
   display: flex;
   justify-content: center;
