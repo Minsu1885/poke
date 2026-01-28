@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PokemonWithNames } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemonImageUrl } from '../services/pokeApi';
+import { getPokemonImageUrl, getPokemonFallbackImageUrl } from '../services/pokeApi';
 import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonCard.css';
 
@@ -13,6 +13,7 @@ interface PokemonCardProps {
 export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
   const { language } = useLanguage();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   const primaryType = pokemon.types[0]?.type.name || 'normal';
   const backgroundColor = TYPE_COLORS[primaryType] || TYPE_COLORS.normal;
@@ -20,6 +21,10 @@ export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
   const displayName = language === 'ko'
     ? (pokemon.names.ko || pokemon.name)
     : (pokemon.names.en || pokemon.name);
+
+  const imageUrl = useFallback
+    ? getPokemonFallbackImageUrl(pokemon.id)
+    : getPokemonImageUrl(pokemon.id);
 
   return (
     <div
@@ -31,10 +36,11 @@ export function PokemonCard({ pokemon, onClick }: PokemonCardProps) {
       <div className="pokemon-card__image-container">
         {!imageLoaded && <div className="pokemon-card__image-skeleton"></div>}
         <img
-          src={getPokemonImageUrl(pokemon.id)}
+          src={imageUrl}
           alt={displayName}
           className={`pokemon-card__image ${imageLoaded ? 'pokemon-card__image--loaded' : ''}`}
           onLoad={() => setImageLoaded(true)}
+          onError={() => !useFallback && setUseFallback(true)}
           loading="lazy"
         />
       </div>

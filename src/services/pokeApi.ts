@@ -30,15 +30,24 @@ export function getPokemonImageUrl(id: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
 
+export function getPokemonFallbackImageUrl(id: number): string {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
+
 export async function getPokemonWithNames(nameOrId: string | number): Promise<PokemonWithNames> {
-  const [pokemon, species] = await Promise.all([
-    getPokemon(nameOrId),
-    getPokemonSpecies(nameOrId),
-  ]);
+  const pokemon = await getPokemon(nameOrId);
 
   const names: Record<string, string> = {};
-  for (const entry of species.names) {
-    names[entry.language.name] = entry.name;
+
+  try {
+    const species = await getPokemonSpecies(nameOrId);
+    for (const entry of species.names) {
+      names[entry.language.name] = entry.name;
+    }
+  } catch {
+    // Species data not available for some Pokemon
+    names.en = pokemon.name;
+    names.ko = pokemon.name;
   }
 
   return {

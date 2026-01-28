@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { PokemonWithNames, PokemonSpecies } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { getPokemonSpecies, getPokemonImageUrl } from '../services/pokeApi';
+import { getPokemonSpecies, getPokemonImageUrl, getPokemonFallbackImageUrl } from '../services/pokeApi';
 import { useLanguage } from '../i18n/LanguageContext';
 import './PokemonDetail.css';
 
@@ -14,6 +14,7 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
   const { language, t } = useLanguage();
   const [species, setSpecies] = useState<PokemonSpecies | null>(null);
   const [showShiny, setShowShiny] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     getPokemonSpecies(pokemon.id)
@@ -76,20 +77,25 @@ export function PokemonDetail({ pokemon, onClose }: PokemonDetailProps) {
           </div>
           <div className="pokemon-detail__image-container">
             <img
-              src={showShiny
-                ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/${pokemon.id}.png`
-                : getPokemonImageUrl(pokemon.id)
+              src={useFallback
+                ? getPokemonFallbackImageUrl(pokemon.id)
+                : showShiny
+                  ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/${pokemon.id}.png`
+                  : getPokemonImageUrl(pokemon.id)
               }
               alt={displayName}
               className="pokemon-detail__image"
+              onError={() => !useFallback && setUseFallback(true)}
             />
-            <button
-              className="pokemon-detail__shiny-toggle"
-              onClick={() => setShowShiny(!showShiny)}
-              title={showShiny ? t('showNormal') : t('showShiny')}
-            >
-              {showShiny ? '✨' : '⭐'}
-            </button>
+            {!useFallback && (
+              <button
+                className="pokemon-detail__shiny-toggle"
+                onClick={() => setShowShiny(!showShiny)}
+                title={showShiny ? t('showNormal') : t('showShiny')}
+              >
+                {showShiny ? '✨' : '⭐'}
+              </button>
+            )}
           </div>
         </div>
 

@@ -31,9 +31,13 @@ export function Pokedex() {
       setTotalCount(response.count);
       setLoadedCount(offset + response.results.length);
 
-      const pokemonDetails = await Promise.all(
+      const pokemonResults = await Promise.allSettled(
         response.results.map((p) => getPokemonWithNames(p.name))
       );
+
+      const pokemonDetails = pokemonResults
+        .filter((result): result is PromiseFulfilledResult<PokemonWithNames> => result.status === 'fulfilled')
+        .map((result) => result.value);
 
       if (append) {
         setPokemonList((prev) => [...prev, ...pokemonDetails]);
@@ -153,7 +157,7 @@ export function Pokedex() {
             </div>
           )}
 
-          {loadedCount < totalCount && !searchTerm && !selectedType && (
+          {loadedCount < totalCount && (
             <div className="pokedex__load-more">
               <button
                 onClick={handleLoadMore}
